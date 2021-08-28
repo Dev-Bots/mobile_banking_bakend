@@ -1,0 +1,9 @@
+from flask import Flask
+app = Flask(__name__)
+
+@app.route('/')
+def APIDocumnetation():
+    return 'This is the API to the Mobile Banking Flutter App!'
+
+if __name__ == '__main__':
+    app.run()
