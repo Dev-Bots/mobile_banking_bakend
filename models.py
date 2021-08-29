@@ -93,3 +93,36 @@ class Admin(Account):
 
 
 ###########################################################
+
+#Agent specific Account
+class Agent(Account):
+
+    __tablename__ = 'agent'
+    
+    budget = db.Column(db.Float)
+    withdraw_accepted = db.Column(db.Float)
+    deposit_accepted = db.Column(db.Float)
+    new_user_registered = db.Column(db.Integer)
+
+    def __init__(self, email, password,  phone_number, first_name, last_name, DOB, address, budget=0):
+        super().__init__(email, password, phone_number, first_name, last_name, DOB, address)
+        self.budget = budget
+        self.account_role = 1
+        self.new_user_registered = 0
+        self.deposit_accepted = 0
+        self.withdraw_accepted = 0
+   
+
+    def serialize(self):
+        general = self.serialize_general_info()
+        general['budget'] = self.budget
+        if self.withdraw_accepted:
+            general['pending_commisssion_payement'] = (self.withdraw_accepted + self.deposit_accepted) * AGENT_TRANSACTION_COMMISSION + self.new_user_registered * COMMISSION_FOR_REGISTERING
+        
+        registered = Client.query.filter(Client.registered_by == self.account_number).all()
+        if registered:
+            general["registered_clients"] = [client.account_number for client in registered]
+
+        return general
+
+###############################################################################################
