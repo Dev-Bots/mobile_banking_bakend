@@ -70,3 +70,26 @@ class Account(db.Model):
         return f'<{self.get_role()}: {self.id} {self.fullname()}>'
 
 ###########################################################################################
+
+#Admin specific Account
+class Admin(Account):
+
+    __tablename__ = 'admin'
+
+    bank_budget = db.Column(db.Float)
+    
+
+    def __init__(self, email, password, phone_number, first_name, last_name, DOB, address):
+        super().__init__(email, password, phone_number, first_name, last_name, DOB, address)
+        self.account_role = 0
+        self.bank_budget = 100
+
+    def serialize(self):
+        general = self.serialize_general_info()
+        general['bank_budget'] = self.bank_budget
+        
+
+        return general
+
+
+###########################################################
