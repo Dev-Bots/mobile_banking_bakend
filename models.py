@@ -126,3 +126,54 @@ class Agent(Account):
         return general
 
 ###############################################################################################
+#Client specific Account
+class Client(Account):
+
+    __tablename__ = 'client'
+    client_id = db.Column(db.String, db.ForeignKey('account.account_number'))
+    balance = db.Column(db.Float)
+    beneficiaries = db.relationship('Client', foreign_keys=client_id)    
+    account_type = db.Column(db.Integer, nullable=True)
+    registered_by = db.Column(db.String)
+
+    def __init__(self, email, password, phone_number, first_name, last_name, DOB, address, balance, registered_by):
+        super().__init__(email, password, phone_number, first_name, last_name, DOB, address)
+        self.balance = balance
+        self.account_role = 2
+        self.client_id = self.account_number
+        self.registered_by = registered_by
+        
+        if self.balance >= GOLD_AMOUNT:
+            self.account_type = 1
+        elif self.balance >= SILVER_AMOUNT:
+            self.account_type = 2
+        else:
+            self.account_type = 3
+
+
+    def get_account_type(self):
+        types = {
+            "3": "bronze",
+            "2": "silver",
+            "1": "gold"
+        }
+
+        if self.account_type:
+            return types[str(self.account_type)]
+
+        return None
+
+
+
+    def serialize(self):
+        general = self.serialize_general_info()
+        general["balance"] = self.balance
+        general["account_type"] = self.get_account_type()
+        general["saved"] = [account.account_number for account in self.beneficiaries] # saved for ease of use
+        general["registered_by"] = self.registered_by
+
+        return general
+    
+
+
+###########################################################################################
