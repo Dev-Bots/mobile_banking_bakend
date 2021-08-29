@@ -174,6 +174,50 @@ class Client(Account):
 
         return general
     
+###########################################################################################
 
+#history table to keep any kind of transactions
+class Transaction(db.Model):
+    
+    __tablename__ = 'transaction'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    account_number = db.Column(db.Integer, db.ForeignKey('account.account_number'))
+    transaction_type = db.Column(db.Integer, nullable=False)
+    related_account = db.Column(db.Integer, nullable=True)
+    remark = db.Column(db.String(30), nullable=False)
+    deleted = db.Column(db.Boolean)
+    date = db.Column(db.DateTime)
+
+    def __init__(self, account_number, remark, transaction_type, reciever_account_number=None):
+        self.account_number = account_number
+        self.related_account = reciever_account_number
+        self.remark = remark
+        self.deleted = False
+        self.transaction_type = transaction_type
+        self.date = datetime.datetime.now()
+
+    def get_type(self):
+
+        if self.transaction_type is None:
+            return "Unspecified type"
+
+        types = {
+            "0": "transfer",
+            "1": "deposit",
+            "2": "withdraw"
+        }
+
+        return types[str(self.transaction_type)]
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "account_id": self.account_number,
+            "related_account": self.related_account,
+            "transaction_type": self.get_type(),
+            "text": self.remark,
+            "date": self.date
+        }
 
 ###########################################################################################
