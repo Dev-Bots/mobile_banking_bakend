@@ -221,3 +221,51 @@ class Transaction(db.Model):
         }
 
 ###########################################################################################
+class Loan(db.Model):
+    
+    __tablename__ = 'loan'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    account_number = db.Column(db.Integer, db.ForeignKey('account.account_number'))
+    amount_taken = db.Column(db.Float, nullable=False)
+    remaining_amount = db.Column(db.Float)
+    due_date = db.Column(db.DateTime, nullable=False)
+    date_taken = db.Column(db.DateTime, nullable=False)
+    is_active = db.Column(db.Boolean)
+    
+    
+
+    def __init__(self, account_number, amount_taken, due_date, interest_rate):
+        self.account_number = account_number
+        self.amount_taken = amount_taken
+        self.remaining_amount = amount_taken + amount_taken * interest_rate
+        self.due_date = due_date
+        self.is_active = True
+        self.date_taken = datetime.datetime.now()
+
+
+    def serialize(self):
+        return {
+            "id":self.id,
+            "account_number": self.account_number,
+            "amount_taken": self.amount_taken,
+            "remaining_amount": self.remaining_amount,
+            "is_active": self.is_active,
+            "date_taken": self.date_taken,
+            "due_date":self.due_date
+        }
+
+#############################################################################################
+
+
+# import bcrypt
+# db.drop_all()
+# db.create_all()
+# password = bcrypt.hashpw(b"1234", bcrypt.gensalt())
+
+# admin = Admin("@administrator", password, "1234", "admin", "admin_last", "yesturday", "jemo")
+# # agent = Agent("agent", password, '123456', 'k', 's', 'now', 'here', 1000)
+# # client = Client('new', password, '4321', 'kev', 'shi', 'now', 'here', 5000, '1000000002')
+# admin.account_number = CENTRAL_ACCOUNT_NUMBER
+# db.session.add(admin)
+# db.session.commit()
