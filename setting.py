@@ -1,0 +1,5 @@
+SQLALCHEMY_DATABASE_URI = 'sqlite:///./app.db'
+SQLALCHEMY_TRACK_MODIFICATIONS = True
+FLASK_DEBUG = True
+SECERET_KEY = "myseceret"
+
