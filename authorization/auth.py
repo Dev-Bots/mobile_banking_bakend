@@ -44,3 +44,34 @@ class Login(Resource):
             return make_response('Could not verify', 401, {'WWWAuthenticate': 'Basic realm="Login required"'})
 
 
+# /api/admin/register_agent
+class RegisterAgent(Resource):
+
+    method_decorators = [admin_required]
+
+    def post(self, current_user):
+        args = account_args.parse_args()
+
+        #encrypting password
+        password_form_request = args["password"].encode("utf-8")
+        password = bcrypt.hashpw(password_form_request, bcrypt.gensalt())
+
+        try:
+            agent = Agent(args["email"], password, args["phone_number"], args["first_name"], args["last_name"], args["DOB"], args["address"], args['budget'])
+            current_user.bank_budget -= args['budget']
+            
+            db.session.add(current_user)
+            db.session.add(agent)
+            db.session.commit()
+
+            #making the account number start from a base number
+            agent.account_number = 1000000000 + agent.id
+    
+            db.session.add(agent)
+            db.session.commit()
+
+
+            return make_response({"Success": f"Agent({agent.account_number}) Created Successfully"}, 201)
+        except:
+            
+            return make_response({"Error": "Failed to open an account."}, 401)
