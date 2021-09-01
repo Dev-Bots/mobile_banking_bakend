@@ -116,3 +116,22 @@ class RegisterClient(Resource):
 
         users = Client.query.filter(Client.agent_account_number == current_user.account_number).all()
         return jsonify([user.account_number for user in users])
+
+class BlockAccount(Resource):
+
+    method_decorators = [admin_required]
+
+    def put(self, current_user, account_number):
+
+        if account_number != current_user.account_number:
+            account = Account.query.filter(Account.account_number==account_number).first()
+            try:
+                account.is_blocked = not account.is_blocked
+                message = "blocked" if account.is_blocked else "unblocked"
+
+                db.session.add(account)
+                db.session.commit()
+
+                return make_response({"message": f"{account.account_number} is {message}"})
+            except:
+                return make_response({"message": "Account does not exist."}, 404)
