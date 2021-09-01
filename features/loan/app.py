@@ -34,3 +34,17 @@ class LoanSchema(Resource):
 
                     new_loan = Loan(current_user.account_number, args["amount"], datetime.datetime.utcnow() + datetime.timedelta(days=days), interest_rate)
                     central_account = Admin.query.filter(Admin.account_number == CENTRAL_ACCOUNT_NUMBER).first()
+                    central_account.bank_budget -= args['amount']
+                    current_user.balance += args['amount']
+                    
+                    db.session.add(new_loan)
+                    db.session.add(central_account)
+                    db.session.add(current_user)
+                    db.session.commit()
+
+                
+
+                    return make_response({"message": f"Loan taken successfully, amount to be paied is {new_loan.remaining_amount}"})
+                return make_response({"message": "Can not take this ammount."}, 401)
+            return make_response({"message": "Please pay your current debt first."}, 401)
+        return make_response({"message": "Loan feature is only allowed for client accounts."}, 401)
