@@ -135,3 +135,26 @@ class BlockAccount(Resource):
                 return make_response({"message": f"{account.account_number} is {message}"})
             except:
                 return make_response({"message": "Account does not exist."}, 404)
+
+class ChangeAccountType(Resource):
+
+    method_decorators = [admin_required]
+
+    #send the account type in the body as "account_type"
+    def put(self, current_user, account_number):
+
+        client = Client.query.filter(Client.account_number == account_number).first()
+        args = account_args.parse_args()
+
+        if client:
+            #type
+            account_type = args["account_type"]
+            if client.account_type != account_type:
+                client.account_type = account_type
+
+                db.session.add(client)
+                db.session.commit()
+
+                return make_response({"message": "Account type changed successfully"}, 201)
+            return make_response({"message": "No change detected!"}, 401)       
+        return make_response({"message": "Account does not exist."}, 401)
