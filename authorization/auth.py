@@ -75,3 +75,44 @@ class RegisterAgent(Resource):
         except:
             
             return make_response({"Error": "Failed to open an account."}, 401)
+        
+
+# /api/agent/register_client
+class RegisterClient(Resource):
+
+    method_decorators = [agent_required]
+
+    def post(self, current_user):
+        args = account_args.parse_args()
+
+        #encrypting password
+        password_form_request = args["password"].encode("utf-8")
+        password = bcrypt.hashpw(password_form_request, bcrypt.gensalt())
+
+        try:
+            if current_user.budget < args['balance']:
+                return make_response({'message': 'Insufficient balance to create the account.'}, 401)
+            client = Client(args["email"], password, args["phone_number"], args["first_name"], args["last_name"], args['DOB'], args["address"], args["balance"], current_user.account_number)
+            current_user.new_user_registered += 1
+            current_user.budget -= args['balance']
+            
+            db.session.add(client)
+            db.session.add(current_user)
+            db.session.commit()
+
+            #making the account number start from a base number
+            client.account_number = 1000000000 + client.id
+            db.session.add(client)
+            db.session.commit()
+            
+            return make_response({"Success": f"Client({client.account_number}) Created Successfully"}, 201) 
+
+        except e:
+            print(e)
+            return make_response({"Error": "Failed to open an account."}, 401)
+
+    # view registered users
+    def get(self, current_user):
+
+        users = Client.query.filter(Client.agent_account_number == current_user.account_number).all()
+        return jsonify([user.account_number for user in users])
