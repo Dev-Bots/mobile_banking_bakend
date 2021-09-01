@@ -48,3 +48,10 @@ class LoanSchema(Resource):
                 return make_response({"message": "Can not take this ammount."}, 401)
             return make_response({"message": "Please pay your current debt first."}, 401)
         return make_response({"message": "Loan feature is only allowed for client accounts."}, 401)
+
+    def get(self, current_user):
+        active_loan = Loan.query.filter(Loan.account_number == current_user.account_number, Loan.is_active == True).first()
+
+        if active_loan:
+            return jsonify(active_loan.serialize())
+        return make_response({"message": "No active loans."}, 400)
