@@ -1,34 +1,28 @@
 
-from flask_restful import reqparse
-from datetime import datetime
+# minimums to open an account
+GOLD_AMOUNT = 20000
+SILVER_AMOUNT = 5000
+BRONZE_AMOUNT = 50
+
+# maximum amount to take a loan
+GOLD_LOAN_AMOUNT = 10000
+SILVER_LOAN_AMOUNT = 5000
+BRONZE_LOAN_AMOUNT = 1000
+
+# interest rates based on account types
+GOLD_RATE = 0.10 # 10% interest rates
+SILVER_RATE = 0.15 # 15% interest rates
+BRONZE_RATE = 0.20 # 20% interest rates
+
+# loan return date for account types
+GOLD_DAYS = 90
+SILVER_DAYS = 60
+BRONZE_DAYS = 30
+
+# commission rate for agent transaction 2 percent
+AGENT_TRANSACTION_COMMISSION = 0.02
+# 10 Digital money for registering a client
+COMMISSION_FOR_REGISTERING = 10
 
 
-#register
-account_args = reqparse.RequestParser()
-
-account_args.add_argument("first_name", type=str)
-account_args.add_argument("last_name", type=str)
-account_args.add_argument("password", type=str)
-account_args.add_argument("phone_number", type=str)
-account_args.add_argument("email", type=str)
-account_args.add_argument("address", type=str)
-account_args.add_argument("DOB", type=str)
-account_args.add_argument("balance", type=float)
-account_args.add_argument("budget", type=float)
-account_args.add_argument("account_type", type=int) #validator - must be 1,2 or 3 only
-
-
-
-transaction_agrs  = reqparse.RequestParser()
-
-transaction_agrs.add_argument('amount', type=float)
-transaction_agrs.add_argument('reciever_account_number', type=str)
-transaction_agrs.add_argument('tranction_id', type=int)
-
-
-
-
-loan_args = reqparse.RequestParser()
-
-loan_args.add_argument('amount', type=float)
-loan_args.add_argument('topup', type=float)
+CENTRAL_ACCOUNT_NUMBER = '1001'
