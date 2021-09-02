@@ -55,3 +55,64 @@ class LoanSchema(Resource):
         if active_loan:
             return jsonify(active_loan.serialize())
         return make_response({"message": "No active loans."}, 400)
+
+    def get(self, current_user):
+        active_loan = Loan.query.filter(Loan.account_number == current_user.account_number, Loan.is_active == True).first()
+
+        if active_loan:
+            return jsonify(active_loan.serialize())
+        return make_response({"message": "No active loans."}, 400)
+
+    # an update function for loan topup
+    def put(self, current_user):
+        active_loan = Loan.query.filter(Loan.account_number == current_user.account_number, Loan.is_active == True).first()
+        #converting account type to client model
+        current_user = Client.query.get(current_user.id)
+        #central account
+        central_account = Admin.query.filter(Admin.account_number == CENTRAL_ACCOUNT_NUMBER).first()
+
+        if active_loan:
+            args = loan_args.parse_args()
+            topup = args['topup']
+
+            if current_user.balance >= topup:
+                if topup <= active_loan.remaining_amount:
+                    
+                    active_loan.remaining_amount -= topup
+                    current_user.balance -= topup
+                    central_account.bank_budget += topup
+
+                    #check if the user has finished the debt
+                    if active_loan.remaining_amount == 0:
+                        active_loan.is_active = False
+                        db.session.add(current_user)
+                        db.session.add(central_account)
+                        db.session.add(active_loan)
+                        db.session.commit()
+
+                        return make_response({'message': 'Congragulations you have finished your debt.'}, 201)
+                    
+                    db.session.add(current_user)
+                    db.session.add(central_account)
+                    db.session.add(active_loan)
+                    db.session.commit()
+                    return make_response({'message': f'Topup successful, you now have {active_loan.remaining_amount} debt left'}, 201)
+                
+                current_user.balance -= active_loan.remaining_amount
+                central_account.bank_budget += active_loan.remaining_amount
+                # returning amount from the extra topup provided
+                returning_amount = topup - active_loan.remaining_amount
+                active_loan.remaining_amount = 0
+                active_loan.is_active = False
+
+                db.session.add(current_user)
+                db.session.add(central_account)
+                db.session.add(active_loan)
+                db.session.commit()
+
+
+                return make_response({"message": f"You have paid all the remaining amount, {returning_amount} has been returned to your account."}, 201)
+
+            return make_response({'message': 'Insufficient balance'}, 401)  
+
+        return make_response({'message': "Loan is not active."}, 401)
