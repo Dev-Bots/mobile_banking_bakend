@@ -116,3 +116,26 @@ class LoanSchema(Resource):
             return make_response({'message': 'Insufficient balance'}, 401)  
 
         return make_response({'message': "Loan is not active."}, 401)
+
+    def delete(self, current_user):
+        active_loan = Loan.query.filter(Loan.account_number == current_user.account_number, Loan.is_active == True).first()
+        #converting account type to client model
+        current_user = Client.query.get(current_user.id)
+
+
+        if active_loan:
+            if current_user.balance >= active_loan.remaining_amount:
+                current_user.balance -= active_loan.remaining_amount
+                central_account = Admin.query.filter(Admin.account_number == CENTRAL_ACCOUNT_NUMBER).first()
+                central_account.bank_budget += active_loan.remaining_amount
+                active_loan.remaining_amount = 0
+                active_loan.is_active = False
+
+                db.session.add(current_user)
+                db.session.add(central_account)
+                db.session.add(active_loan)
+                db.session.commit()
+
+                return make_response({'message': 'Loan paid in full'}, 202)
+            return make_response({'message': 'Insufficient balance'}, 401) 
+        return make_response({"message": "loan deleted"})
