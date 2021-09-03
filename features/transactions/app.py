@@ -96,3 +96,42 @@ class ClientTransfer(Resource):
             return make_response({"message": "Failed: Balance is not sufficient."}, 401)
         
         return make_response({"message": "Account does not exist"}, 404)
+    
+    
+    
+    # send money  to agents and recieve cash
+class ClientWithdraw(Resource):
+    
+    method_decorators = [token_required]
+
+    def post(self, current_user):
+        args = transaction_agrs.parse_args()
+        agent = Agent.query.filter(Agent.account_number == args["reciever_account_number"]).first()
+        current_user = Client.query.get(current_user.id)
+        if agent:
+
+            amount = args["amount"]
+
+            # clients can not deposit to thier own accounts
+            if current_user.balance >= amount and current_user is not agent:
+                # transfer amount from client to agent
+                current_user.balance -= amount
+                agent.budget += amount
+
+                #account the accepted withdraw ammount for the agent
+                agent.withdraw_accepted += amount
+
+                transaction = Transaction(current_user.account_number, f"Withdraw: Amount {amount} birr has been withdrawn from account.", 2, agent.account_number)
+                agent_transaction = Transaction(agent.account_number, f"Withdraw_accepted: Amount {amount}birr.", 1, current_user.account_number)
+
+                db.session.add(current_user)
+                db.session.add(agent)
+                db.session.add(transaction)
+                db.session.add(agent_transaction)
+                db.session.commit()
+
+                return make_response({"message": "Withdraw successful!"}, 201)
+            
+            return make_response({"message": "Failed: Balance is not sufficient."}, 401)
+        
+        return make_response({"message": "Account does not exist"}, 404)
