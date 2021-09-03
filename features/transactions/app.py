@@ -64,3 +64,35 @@ class SaveAccount(Resource):
                 return make_response({"message": f"Account({account.account_number}) removed."}, 202)
             return make_response({"message": "Account is not in saved list."}, 404)
         return make_response({"message": "Account does not exist."}, 404)
+
+#transfer money to other clients
+class ClientTransfer(Resource):
+
+    method_decorators = [token_required]
+
+    def post(self, current_user):
+        args = transaction_agrs.parse_args()
+        related_account = Client.query.filter(Account.account_number == args["reciever_account_number"]).first()
+        current_user = Client.query.get(current_user.id)
+        if related_account:
+
+            amount = args["amount"]
+
+            # clients can not deposit to thier own accounts
+            if current_user.balance >= amount and current_user is not related_account:
+                current_user.balance -= amount
+                related_account.balance += amount
+                transaction = Transaction(current_user.account_number, f"Transfer: Amount {amount} birr transfer has been made.", 0, related_account.account_number)
+                related_account_transaction = Transaction(related_account.account_number, f"Deposit made: Amount {amount} birr has been deposited to your account.", 1, current_user.account_number)
+                
+                db.session.add(current_user)
+                db.session.add(related_account)
+                db.session.add(transaction)
+                db.session.add(related_account_transaction)
+                db.session.commit()
+
+                return make_response({"message": "Transfer successful!"}, 201)
+            
+            return make_response({"message": "Failed: Balance is not sufficient."}, 401)
+        
+        return make_response({"message": "Account does not exist"}, 404)
