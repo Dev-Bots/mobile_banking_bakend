@@ -135,3 +135,44 @@ class ClientWithdraw(Resource):
             return make_response({"message": "Failed: Balance is not sufficient."}, 401)
         
         return make_response({"message": "Account does not exist"}, 404)
+    
+    
+    
+    # deposit money to accounts recieving cash
+class AcceptDeposit(Resource):
+    
+    method_decorators = [agent_required]
+    
+    def post(self, current_user):
+        args = transaction_agrs.parse_args()
+        related_account = Client.query.filter(Client.account_number == args["reciever_account_number"]).first()
+        
+        if related_account:
+
+            amount = args["amount"]
+
+            
+            if current_user.budget >= amount and related_account.account_number != current_user.account_number:
+                
+                #transfer made from agent to client
+                current_user.budget -= amount
+                related_account.balance += amount
+
+                # account the deposit amount accepted by the agent
+                current_user.deposit_accepted += amount
+
+                transaction = Transaction(current_user.account_number, f"Deposited: Amount {amount} birr transfer has been made.", 0, related_account.account_number)
+                related_account_transaction = Transaction(related_account.account_number, f"Deposit made: Amount {amount} birr has been deposited to your account.", 1, current_user.account_number)
+                
+                db.session.add(related_account_transaction)
+                db.session.add(related_account) 
+                db.session.add(current_user)
+                db.session.add(transaction)
+                
+                db.session.commit()
+
+                return make_response({"message": "Deposit successful!"}, 201)
+            
+            return make_response({"message": "Failed: Insufficient budget."}, 401)
+        
+        return make_response({"message": "Account does not exist"}, 404)
