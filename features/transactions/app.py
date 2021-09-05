@@ -220,4 +220,32 @@ class RequestPayment(Resource):
 
         return make_response({"message": "No Commission to be paid."}, 401)
 
+class AgentWithdraw(Resource):
     
+    method_decorators = [agent_required]
+
+    def post(self, current_user):
+        args = transaction_agrs.parse_args()
+        related_account = Admin.query.filter(Admin.account_number == args["reciever_account_number"]).first()
+        
+        if related_account:
+
+            amount = args["amount"]
+
+            
+            if current_user.budget >= amount:
+                current_user.budget -= amount
+                related_account.bank_budget += amount
+                transaction = Transaction(current_user.account_number, f"Withdraw: Amount {amount} birr has been withdrawn from account.", 2, related_account.account_number)
+                related_account_transaction = Transaction(related_account.account_number, f"Deposit made: Amount {amount} birr has been deposited to your account.", 1, current_user.account_number)
+                db.session.add(current_user)
+                db.session.add(related_account)
+                db.session.add(transaction)
+                db.session.add(related_account_transaction)
+                db.session.commit()
+
+                return make_response({"message": "Withdraw successful!"}, 201)
+            
+            return make_response({"message": "Failed: Budget is not sufficient."}, 401)
+        
+        return make_response({"message": "Account does not exist"}, 404)
