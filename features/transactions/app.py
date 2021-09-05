@@ -176,3 +176,48 @@ class AcceptDeposit(Resource):
             return make_response({"message": "Failed: Insufficient budget."}, 401)
         
         return make_response({"message": "Account does not exist"}, 404)
+    
+
+class RequestPayment(Resource):
+    
+    method_decorators=[agent_required]
+
+    def put(self, current_user):
+        
+        data = current_user.serialize()
+
+    
+        commission = data['pending_commisssion_payement']
+        central_account = Admin.query.filter(Admin.account_number == CENTRAL_ACCOUNT_NUMBER).first()
+
+        if commission > 0:
+            
+            # to check if the agent has deposited more or withdrawn more
+            budget_effect = current_user.deposit_accepted - current_user.withdraw_accepted
+
+            # positive or neutral effect
+            if budget_effect >= 0:
+                central_account.bank_budget += budget_effect
+            # negative effect
+            else:
+                central_account.bank_budget -= abs(budget_effect) 
+            
+            # paying the agent his/her commission
+            central_account.bank_budget -= commission
+            current_user.budget += commission
+
+            # reseting to zero
+            current_user.deposit_accepted = 0
+            current_user.withdraw_accepted = 0
+            current_user.new_user_registered = 0
+
+            db.session.add(current_user)
+            db.session.add(central_account)
+
+            db.session.commit()
+
+            return make_response({"message": "Commission payment successful"}, 201)
+
+        return make_response({"message": "No Commission to be paid."}, 401)
+
+    
