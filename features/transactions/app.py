@@ -284,3 +284,16 @@ class AdminDeposit(Resource):
         
         return make_response({"message": "Account does not exist"}, 404)
 
+class TransactionHistory(Resource):
+    
+    method_decorators = [token_required]
+
+    def get(self, current_user):
+        transactions = Transaction.query.filter(Transaction.account_number == current_user.account_number, Transaction.deleted == False).all()
+  
+        if transactions:
+            transaction = [transaction.serialize() for transaction in transactions]
+            transaction.reverse()
+            return jsonify(transaction)
+
+        return make_response({"message": "Can't find transaction history"}, 404)
