@@ -249,3 +249,38 @@ class AgentWithdraw(Resource):
             return make_response({"message": "Failed: Budget is not sufficient."}, 401)
         
         return make_response({"message": "Account does not exist"}, 404)
+
+# deposit money to agents and add money to the central account
+class AdminDeposit(Resource):
+    
+    method_decorators = [admin_required]
+    
+    def post(self, current_user):
+        args = transaction_agrs.parse_args()
+        related_account = Agent.query.filter(Agent.account_number == args["reciever_account_number"]).first()
+        
+        if related_account:
+
+            amount = args["amount"]
+
+            # admin can deposit to its own account
+            if related_account.account_number == current_user.account_number:
+                current_user.bank_budget += amount
+            else:
+                current_user.bank_budget -= amount
+                related_account.budget += amount
+                related_account_transaction = Transaction(related_account.account_number, f"Deposit made: Amount {amount} birr has been deposited to your account.", 1, current_user.account_number)
+                db.session.add(related_account_transaction)
+                db.session.add(related_account)
+            transaction = Transaction(current_user.account_number, f"Deposited: Amount {amount} birr transfer has been made.", 0, related_account.account_number)
+            
+                
+            db.session.add(current_user)
+            db.session.add(transaction)
+            
+            db.session.commit()
+
+            return make_response({"message": "Deposit successful!"}, 201)
+        
+        return make_response({"message": "Account does not exist"}, 404)
+
