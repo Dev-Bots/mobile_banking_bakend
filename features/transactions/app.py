@@ -297,3 +297,24 @@ class TransactionHistory(Resource):
             return jsonify(transaction)
 
         return make_response({"message": "Can't find transaction history"}, 404)
+    
+class TransactionDelete(Resource):
+    
+    method_decorators = [token_required]
+
+    def delete(self, current_user, transaction_id):
+
+        try:
+            transaction = Transaction.query.filter(Transaction.id == transaction_id, Transaction.deleted==False).first()
+
+            if transaction and transaction.account_number == current_user.account_number:
+                transaction.deleted = True
+                db.session.add(transaction)
+                db.session.commit()
+                
+                return make_response({"message": "Transaction deleted successfully."}, 202)
+            return make_response({"message": "Could not find transaction or it is already deleted."}, 400)
+
+        except:
+       
+            return make_response({"message": "No transaction found!"}, 404)
