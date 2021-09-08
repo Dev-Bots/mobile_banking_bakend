@@ -1,5 +1,6 @@
 from flask_restful import Resource
 from flask import request, make_response, jsonify
+import random
 from models import Account
 import jwt
 import bcrypt
@@ -14,34 +15,37 @@ class Login(Resource):
 
     def get(self):
         auth = request.authorization
-
         if not auth or not auth.username or not auth.password:
-            return make_response('Could not verify', 401, {'WWWAuthenticate': 'Basic realm="Login required"'})
+            return make_response({'message': 'Could not verify'}, 401)
 
         account = Account.query.filter(Account.email == auth.username).first()
 
         try:
             if account:
+                if account.is_blocked == True:
+                    return make_response({"message": "Account is blocked!"}, 400)
                 if bcrypt.checkpw(auth.password.encode('utf-8'), account.password):
                     switch = {
                     "admin": admin(account.id),
                     "agent": agent(account.id),
                     "client": client(account.id)
-                }
-                # problem with the client
-                data = switch[account.get_role()]
-                
-                #add the token to the data
-                token = jwt.encode({'account_number': account.account_number, 'exp': dt.datetime.utcnow() + dt.timedelta(hours=5)}, SECERET_KEY)
-                data["token"] = token
+                    }
+                    # problem with the client
+                    data = switch[account.get_role()]
+                    
+                    #add the token to the data
+                    token = jwt.encode({'account_number': account.account_number, 'exp': dt.datetime.utcnow() + dt.timedelta(hours=5)}, SECERET_KEY)
+                    data["token"] = token
 
-                return jsonify(data)
+                    return make_response(jsonify(data), 200)
+                return make_response({'message': "Email or password not correct."}, 400)
             else:
-                return make_response('Could not verify', 401, {'WWWAuthenticate': 'Basic realm="Login required"'})
-        except e:
-            print(e)
+                return make_response({'message': 'Could not verify'}, 401)
+        except:
+  
 
-            return make_response('Could not verify', 401, {'WWWAuthenticate': 'Basic realm="Login required"'})
+            return make_response({'message': 'Could not verify'}, 401)
+
 
 
 # /api/admin/register_agent
@@ -53,9 +57,11 @@ class RegisterAgent(Resource):
         args = account_args.parse_args()
 
         #encrypting password
-        password_form_request = args["password"].encode("utf-8")
+        number = str(random.randint(1111,9999))
+        password_form_request = number.encode("utf-8")
         password = bcrypt.hashpw(password_form_request, bcrypt.gensalt())
-
+ 
+    
         try:
             agent = Agent(args["email"], password, args["phone_number"], args["first_name"], args["last_name"], args["DOB"], args["address"], args['budget'])
             current_user.bank_budget -= args['budget']
@@ -71,11 +77,11 @@ class RegisterAgent(Resource):
             db.session.commit()
 
 
-            return make_response({"Success": f"Agent({agent.account_number}) Created Successfully"}, 201)
+            return make_response({"message": number}, 201)
         except:
             
-            return make_response({"Error": "Failed to open an account."}, 401)
-        
+            return make_response({"message": "Failed to open an account."}, 401)
+
 
 # /api/agent/register_client
 class RegisterClient(Resource):
@@ -86,9 +92,10 @@ class RegisterClient(Resource):
         args = account_args.parse_args()
 
         #encrypting password
-        password_form_request = args["password"].encode("utf-8")
+        number = str(random.randint(1111,9999))
+        password_form_request = number.encode("utf-8")
         password = bcrypt.hashpw(password_form_request, bcrypt.gensalt())
-
+    
         try:
             if current_user.budget < args['balance']:
                 return make_response({'message': 'Insufficient balance to create the account.'}, 401)
@@ -105,17 +112,33 @@ class RegisterClient(Resource):
             db.session.add(client)
             db.session.commit()
             
-            return make_response({"Success": f"Client({client.account_number}) Created Successfully"}, 201) 
+            return make_response({"message": number}, 201) 
 
-        except e:
-            print(e)
-            return make_response({"Error": "Failed to open an account."}, 401)
+        except:
+       
+            return make_response({"message": "Failed to open an account."}, 401)
 
     # view registered users
     def get(self, current_user):
 
         users = Client.query.filter(Client.agent_account_number == current_user.account_number).all()
         return jsonify([user.account_number for user in users])
+
+
+class PasswordReset(Resource):
+
+    method_decorators = [token_required]
+
+    def put(self, current_user):
+        
+        args = account_args.parse_args()
+        new_password = args['password'].encode("utf-8")
+        password = bcrypt.hashpw(new_password, bcrypt.gensalt())
+        current_user.password = password
+        db.session.add(current_user)
+        db.session.commit()
+
+        return make_response({"message": "Password reset successful."}, 201)
 
 class BlockAccount(Resource):
 
@@ -132,9 +155,10 @@ class BlockAccount(Resource):
                 db.session.add(account)
                 db.session.commit()
 
-                return make_response({"message": f"{account.account_number} is {message}"})
+                return make_response({"message": f"{account.account_number} is {message}"}, 202)
             except:
                 return make_response({"message": "Account does not exist."}, 404)
+
 
 class ChangeAccountType(Resource):
 
@@ -155,6 +179,6 @@ class ChangeAccountType(Resource):
                 db.session.add(client)
                 db.session.commit()
 
-                return make_response({"message": "Account type changed successfully"}, 201)
+                return make_response({"message": "Account type changed successfully"}, 202)
             return make_response({"message": "No change detected!"}, 401)       
         return make_response({"message": "Account does not exist."}, 401)
