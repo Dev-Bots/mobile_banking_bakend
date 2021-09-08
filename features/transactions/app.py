@@ -318,3 +318,15 @@ class TransactionDelete(Resource):
         except:
        
             return make_response({"message": "No transaction found!"}, 404)
+    
+class TransactionHistoryAdmin(Resource):
+    
+    method_decorators = [admin_required]
+
+    def get(self, current_user, account_number):
+        transactions = Transaction.query.filter(Transaction.account_number == account_number)
+
+        if transactions:
+            return jsonify([transaction.serialize() for transaction in transactions], 200)
+
+        return make_response({"message": "Can't find transaction history"}, 404)
