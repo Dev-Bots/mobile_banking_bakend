@@ -330,3 +330,31 @@ class TransactionHistoryAdmin(Resource):
             return jsonify([transaction.serialize() for transaction in transactions], 200)
 
         return make_response({"message": "Can't find transaction history"}, 404)
+    
+
+class AdminReport(Resource):
+    
+    method_decorators = [admin_required]
+
+    def get(self, current_user):
+
+        admins = Admin.query.filter(Admin.account_role==0).count()
+        agents = Agent.query.filter(Agent.account_role==1).count()
+        clients = Client.query.filter(Client.account_role==2).count()
+
+        loaned_accounts = Loan.query.filter(Loan.is_active == True).all()
+
+        # total bank system budget
+        amounts = db.session.query(func.sum(Client.balance), func.sum(Agent.budget), func.sum(Admin.bank_budget) ).first()
+       
+
+
+        data = {
+            "num_of_admins": admins,
+            "num_of_agents": agents,
+            "num_of_clients": clients,
+            "total_money_in_bank": sum(amounts),
+            "loaned_accounts": [loan.account_number for loan in loaned_accounts]
+        }
+
+        return data
