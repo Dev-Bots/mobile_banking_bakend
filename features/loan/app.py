@@ -4,17 +4,21 @@ from decorators import *
 from request_args import *
 import datetime
 from constants import *
+
 class LoanSchema(Resource):
 
     method_decorators = [token_required]
+    # made loan post endpoint
     def post(self, current_user):
-        
+        # loan is only allowed for clients
         if current_user.get_role() == 'client':
-            
+            # check if the client doesn't already got an unpaid loan
             active_loan = Loan.query.filter(Loan.account_number == current_user.account_number, Loan.is_active == True).all()
 
             if not active_loan:
                 args = loan_args.parse_args()
+
+                #converting account type to client model
                 current_user = Client.query.get(current_user.id)
                 if current_user.get_account_type() == 'gold':
                     days = GOLD_DAYS
@@ -34,6 +38,8 @@ class LoanSchema(Resource):
 
                     new_loan = Loan(current_user.account_number, args["amount"], datetime.datetime.utcnow() + datetime.timedelta(days=days), interest_rate)
                     central_account = Admin.query.filter(Admin.account_number == CENTRAL_ACCOUNT_NUMBER).first()
+                    
+                    # tranfer from central to the client
                     central_account.bank_budget -= args['amount']
                     current_user.balance += args['amount']
                     
@@ -44,18 +50,12 @@ class LoanSchema(Resource):
 
                 
 
-                    return make_response({"message": f"Loan taken successfully, amount to be paied is {new_loan.remaining_amount}"})
+                    return make_response({"message": f"Loan taken successfully, amount to be paied is {new_loan.remaining_amount}"}, 201)
                 return make_response({"message": "Can not take this ammount."}, 401)
             return make_response({"message": "Please pay your current debt first."}, 401)
         return make_response({"message": "Loan feature is only allowed for client accounts."}, 401)
 
-    def get(self, current_user):
-        active_loan = Loan.query.filter(Loan.account_number == current_user.account_number, Loan.is_active == True).first()
-
-        if active_loan:
-            return jsonify(active_loan.serialize())
-        return make_response({"message": "No active loans."}, 400)
-
+    # made the function that retrieve active loans of a user
     def get(self, current_user):
         active_loan = Loan.query.filter(Loan.account_number == current_user.account_number, Loan.is_active == True).first()
 
@@ -117,6 +117,7 @@ class LoanSchema(Resource):
 
         return make_response({'message': "Loan is not active."}, 401)
 
+    # delete function for the loan
     def delete(self, current_user):
         active_loan = Loan.query.filter(Loan.account_number == current_user.account_number, Loan.is_active == True).first()
         #converting account type to client model
@@ -139,3 +140,4 @@ class LoanSchema(Resource):
                 return make_response({'message': 'Loan paid in full'}, 202)
             return make_response({'message': 'Insufficient balance'}, 401) 
         return make_response({"message": "loan deleted"})
+

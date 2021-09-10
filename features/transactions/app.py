@@ -14,7 +14,7 @@ class AccountSchema(Resource):
     def get(self, current_user, account_number, ):
         account = Account.query.filter(Account.account_number==account_number).first()
         if account:
-            if current_user.id ==account.id or account.get_role() == "admin":
+            if current_user.id ==account.id or current_user.get_role() == "admin":
                 switch = {
                     "admin": admin(account.id),
                     "agent": agent(account.id),
@@ -29,6 +29,7 @@ class AccountSchema(Resource):
             elif current_user != account:
                 return jsonify(account.serialize_general_info()) 
         return make_response({"message": "something wrong"}, 400)
+
 #save customer(contacts) with get method and remove with delete method
 class SaveAccount(Resource):
 
@@ -96,10 +97,9 @@ class ClientTransfer(Resource):
             return make_response({"message": "Failed: Balance is not sufficient."}, 401)
         
         return make_response({"message": "Account does not exist"}, 404)
-    
-    
-    
-    # send money  to agents and recieve cash
+
+
+# send money  to agents and recieve cash
 class ClientWithdraw(Resource):
     
     method_decorators = [token_required]
@@ -135,10 +135,10 @@ class ClientWithdraw(Resource):
             return make_response({"message": "Failed: Balance is not sufficient."}, 401)
         
         return make_response({"message": "Account does not exist"}, 404)
-    
-    
-    
-    # deposit money to accounts recieving cash
+
+
+
+# deposit money to accounts recieving cash
 class AcceptDeposit(Resource):
     
     method_decorators = [agent_required]
@@ -176,10 +176,10 @@ class AcceptDeposit(Resource):
             return make_response({"message": "Failed: Insufficient budget."}, 401)
         
         return make_response({"message": "Account does not exist"}, 404)
-    
+
 
 class RequestPayment(Resource):
-    
+
     method_decorators=[agent_required]
 
     def put(self, current_user):
@@ -284,8 +284,45 @@ class AdminDeposit(Resource):
         
         return make_response({"message": "Account does not exist"}, 404)
 
+class AdminReport(Resource):
+
+    method_decorators = [admin_required]
+
+    def get(self, current_user):
+
+        try:
+
+            accounts = Account.query.all()
+            admins = Admin.query.filter(Admin.account_role==0)
+            agents = Agent.query.filter(Agent.account_role==1)
+            clients = Client.query.filter(Client.account_role==2)
+
+            loans = Loan.query.filter(Loan.is_active == True).all()
+
+            # total bank system budget
+            amounts = db.session.query(func.sum(Client.balance), func.sum(Agent.budget), func.sum(Admin.bank_budget) ).first()
+            amount_in_loan = db.session.query(func.sum(Loan.remaining_amount )).first()
+
+
+            data = {
+                "total_money_in_bank": sum(amounts),
+                "total_money_in_loan": sum(amount_in_loan),
+                "num_of_admins": admins.count(),
+                "num_of_agents": agents.count(),
+                "num_of_clients": clients.count(),
+                "all_accounts": [account.serialize_general_info() for account in accounts],
+                "loans": [loan.serialize() for loan in loans],
+                
+            }
+
+            return jsonify(data)
+        except:
+            return make_response({"message": "Failed to get report."}, 400)
+        
+
+
 class TransactionHistory(Resource):
-    
+
     method_decorators = [token_required]
 
     def get(self, current_user):
@@ -297,9 +334,10 @@ class TransactionHistory(Resource):
             return jsonify(transaction)
 
         return make_response({"message": "Can't find transaction history"}, 404)
-    
+        
+
 class TransactionDelete(Resource):
-    
+
     method_decorators = [token_required]
 
     def delete(self, current_user, transaction_id):
@@ -318,7 +356,9 @@ class TransactionDelete(Resource):
         except:
        
             return make_response({"message": "No transaction found!"}, 404)
-    
+
+
+
 class TransactionHistoryAdmin(Resource):
     
     method_decorators = [admin_required]
@@ -330,31 +370,3 @@ class TransactionHistoryAdmin(Resource):
             return jsonify([transaction.serialize() for transaction in transactions], 200)
 
         return make_response({"message": "Can't find transaction history"}, 404)
-    
-
-class AdminReport(Resource):
-    
-    method_decorators = [admin_required]
-
-    def get(self, current_user):
-
-        admins = Admin.query.filter(Admin.account_role==0).count()
-        agents = Agent.query.filter(Agent.account_role==1).count()
-        clients = Client.query.filter(Client.account_role==2).count()
-
-        loaned_accounts = Loan.query.filter(Loan.is_active == True).all()
-
-        # total bank system budget
-        amounts = db.session.query(func.sum(Client.balance), func.sum(Agent.budget), func.sum(Admin.bank_budget) ).first()
-       
-
-
-        data = {
-            "num_of_admins": admins,
-            "num_of_agents": agents,
-            "num_of_clients": clients,
-            "total_money_in_bank": sum(amounts),
-            "loaned_accounts": [loan.account_number for loan in loaned_accounts]
-        }
-
-        return data

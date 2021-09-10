@@ -56,12 +56,13 @@ class Account(db.Model):
             "id":self.id,
             "account_number": self.account_number,
             "email": self.email,
+            "phone_number": self.phone_number,
             "first_name":self.first_name,
             "last_name":self.last_name,
             "fullname":self.fullname(),
             "role":self.get_role(),
             "address":self.address,
-            "DOB":self.DOB,
+            "DOB":str(self.DOB),
             "is_blocked": self.is_blocked
         }
 
@@ -92,7 +93,7 @@ class Admin(Account):
         return general
 
 
-###########################################################
+###########################################################################################
 
 #Agent specific Account
 class Agent(Account):
@@ -117,15 +118,17 @@ class Agent(Account):
         general = self.serialize_general_info()
         general['budget'] = self.budget
         if self.withdraw_accepted:
-            general['pending_commisssion_payement'] = (self.withdraw_accepted + self.deposit_accepted) * AGENT_TRANSACTION_COMMISSION + self.new_user_registered * COMMISSION_FOR_REGISTERING
-        
+            general['pending_commission_payement'] = (self.withdraw_accepted + self.deposit_accepted) * AGENT_TRANSACTION_COMMISSION + self.new_user_registered * COMMISSION_FOR_REGISTERING
+        else:
+            general['pending_commission_payement'] = 0.0
         registered = Client.query.filter(Client.registered_by == self.account_number).all()
         if registered:
-            general["registered_clients"] = [client.account_number for client in registered]
+            general["registered_clients"] = [client.serialize() for client in registered]
 
         return general
 
 ###############################################################################################
+
 #Client specific Account
 class Client(Account):
 
@@ -169,11 +172,13 @@ class Client(Account):
         general = self.serialize_general_info()
         general["balance"] = self.balance
         general["account_type"] = self.get_account_type()
-        general["saved"] = [account.account_number for account in self.beneficiaries] # saved for ease of use
+        general["saved"] = [account.serialize() for account in self.beneficiaries] # saved for ease of use
         general["registered_by"] = self.registered_by
 
         return general
     
+
+
 ###########################################################################################
 
 #history table to keep any kind of transactions
@@ -221,6 +226,7 @@ class Transaction(db.Model):
         }
 
 ###########################################################################################
+
 class Loan(db.Model):
     
     __tablename__ = 'loan'
@@ -251,8 +257,9 @@ class Loan(db.Model):
             "amount_taken": self.amount_taken,
             "remaining_amount": self.remaining_amount,
             "is_active": self.is_active,
-            "date_taken": self.date_taken,
-            "due_date":self.due_date
+            "date_taken": str(self.date_taken),
+            "due_date":str(self.due_date),
+            "date_passed": self.due_date < datetime.datetime.now()
         }
 
 #############################################################################################
@@ -269,3 +276,5 @@ class Loan(db.Model):
 # admin.account_number = CENTRAL_ACCOUNT_NUMBER
 # db.session.add(admin)
 # db.session.commit()
+
+

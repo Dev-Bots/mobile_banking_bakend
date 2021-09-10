@@ -180,5 +180,5 @@ class ChangeAccountType(Resource):
                 db.session.commit()
 
                 return make_response({"message": "Account type changed successfully"}, 202)
-            return make_response({"message": "No change detected!"}, 401)       
+            return make_response({"message": "No change detected!"}, 202)       
         return make_response({"message": "Account does not exist."}, 401)
