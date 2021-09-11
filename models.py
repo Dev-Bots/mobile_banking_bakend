@@ -117,10 +117,11 @@ class Agent(Account):
     def serialize(self):
         general = self.serialize_general_info()
         general['budget'] = self.budget
-        if self.withdraw_accepted:
-            general['pending_commission_payement'] = (self.withdraw_accepted + self.deposit_accepted) * AGENT_TRANSACTION_COMMISSION + self.new_user_registered * COMMISSION_FOR_REGISTERING
-        else:
-            general['pending_commission_payement'] = 0.0
+        if general['role'] == "agent":
+            if self.withdraw_accepted !=0 or self.deposit_accepted != 0 or self.new_user_registered !=0:
+                general['pending_commission_payement'] = (self.withdraw_accepted + self.deposit_accepted) * AGENT_TRANSACTION_COMMISSION + self.new_user_registered * COMMISSION_FOR_REGISTERING
+            else:
+                general['pending_commission_payement'] = 0.0
         registered = Client.query.filter(Client.registered_by == self.account_number).all()
         if registered:
             general["registered_clients"] = [client.serialize() for client in registered]

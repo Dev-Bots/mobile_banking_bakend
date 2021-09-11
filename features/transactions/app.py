@@ -187,7 +187,7 @@ class RequestPayment(Resource):
         data = current_user.serialize()
 
     
-        commission = data['pending_commisssion_payement']
+        commission = data['pending_commission_payement']
         central_account = Admin.query.filter(Admin.account_number == CENTRAL_ACCOUNT_NUMBER).first()
 
         if commission > 0:
